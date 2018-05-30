@@ -433,6 +433,7 @@ void T_InitWads()
 	txt_y = 0;
 	txt_ptr = screens[0];
 	printf("Loading WADs ...\n");
+	printf("hacks by AAGALLAG\n");
 #ifdef LINUX
 	fflush(stdout);
 #endif
@@ -444,17 +445,26 @@ void T_InitWads()
 		// one of original games picked
 		// load common wad first
 		W_LoadWad(BASE_PATH"kgdoom.wad");
+		printf("W_LoadWad has returned...\n");
 		// load main IWAD
 		W_LoadWad(iwad_list[iwad_pick].path);
+		printf("W_LoadWad has returned...\n");
 	}
 
 	// PWAD
+	/*
 	if(wad_pick)
 	{
+		printf("wad_pick is true...\n");
 		char pwad_path[256];
 		sprintf(pwad_path, BASE_PATH"pwads/%s", pwad_list[wad_pick].name);
 		W_LoadWad(pwad_path);
 	}
+	printf("wad_pick block finished\n");
+	*/
+
+	printf("AAGALLAG: T_InitWads() finished...\n");
+	printf("AAGALLAG: T_InitWads() finished...\n");
 }
 #endif
 
