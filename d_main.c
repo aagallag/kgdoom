@@ -50,6 +50,7 @@
 #ifndef LINUX
 #include "wad.h"
 #endif
+#include "config.h"
 
 //
 // D-DoomLoop()
@@ -451,6 +452,7 @@ void D_DoomMain (void)
     printf ("W_Init: Init WADfiles.\n");
 
 	// pick an IWAD
+#ifndef SWITCH_SERVER
 	int doom_wad = select_wad();
 	gamemode = shareware;
 	iwad = "doom1.wad";
@@ -490,6 +492,46 @@ void D_DoomMain (void)
 		gamemode = commercial;
 		iwad = "freedoom2.wad";
 	}
+#else
+	gamemode = shareware;
+	iwad = "doom1.wad";
+
+	if(M_CheckParm ("-doom"))
+	{
+		gamemode = registered;
+		iwad = "doom.wad";
+	} else
+	if(M_CheckParm ("-doomu"))
+	{
+		gamemode = retail;
+		iwad = "doomu.wad";
+	} else
+	if(M_CheckParm ("-tnt"))
+	{
+		gamemode = commercial;
+		iwad = "tnt.wad";
+	} else
+	if(M_CheckParm ("-plutonia"))
+	{
+		gamemode = commercial;
+		iwad = "plutonia.wad";
+	} else
+	if(M_CheckParm ("-doom2"))
+	{
+		gamemode = commercial;
+		iwad = "doom2.wad";
+	} else
+	if(M_CheckParm ("-freedoom"))
+	{
+		gamemode = retail;
+		iwad = "freedoom1.wad";
+	} else
+	if(M_CheckParm ("-freedoom2"))
+	{
+		gamemode = commercial;
+		iwad = "freedoom2.wad";
+	}
+#endif
 
 	printf_net("Wad: ");
 	printf_net(iwad);

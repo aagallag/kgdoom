@@ -1,11 +1,11 @@
 #ifndef LINUX
 #include <libtransistor/err.h>
 #include <libtransistor/ipc/bsd.h>
-#define DBG_SERVER false
 #include "wad.h"
 #include <unistd.h>
 #endif
 
+#include "config.h"
 #include "doomdef.h"
 #include "doomstat.h"
 
@@ -40,6 +40,7 @@ static struct sockaddr_in client_addr =
 {
 	.sin_family = AF_INET,
 };
+
 int client_socket;
 
 int keep_alive;
@@ -47,6 +48,7 @@ int last_packet_tic;
 
 #ifndef LINUX
 
+#ifdef SWITCH_SERVER
 static FILE http_stdout;
 static const char http_get_template[] = "GET /files/%s HTTP/1.1\r\nHost: pegaswitch.local\r\nUser-Agent: kgDOOM\r\nAccept-Encoding: none\r\nConnection: close\r\n\r\n";
 
@@ -55,6 +57,8 @@ static struct sockaddr_in server_addr =
 	.sin_family = AF_INET,
 	.sin_port = htons(80)
 };
+static int http_socket;
+#endif
 
 // +temporary
 struct bsd_pollfd
@@ -66,14 +70,13 @@ struct bsd_pollfd
 #define	BSD_POLLIN	0x0001
 // -temporary
 
-#if DBG_SERVER
+#ifdef DBG_SERVER
 int client_fd;
 #endif
-static int http_socket;
 
 int printf_net(const char *str)
 {
-#if DBG_SERVER
+#ifdef DBG_SERVER
 	return bsd_send(client_fd, str, strlen(str), 0);
 #else
 	return 0;
@@ -82,7 +85,7 @@ int printf_net(const char *str)
 
 static void connect_net()
 {
-#if DBG_SERVER
+#ifdef DBG_SERVER
 	char server_ip_addr[4] = {192, 168, 2, 42};
 	struct sockaddr_in log_server_addr = {
 		.sin_family = AF_INET,
@@ -109,6 +112,7 @@ static void connect_net()
 #endif
 }
 
+#ifdef SWITCH_SERVER
 static int stdout_http(struct _reent *reent, void *v, const char *ptr, int len)
 {
 	bsd_send(http_socket, ptr, len, 0);
@@ -183,6 +187,62 @@ static int parse_header(char *buf, int len, int *offset, int *got)
 	return -1;
 }
 
+int http_get_file(const char *path, void **buff)
+{
+	char temp[1024];
+	int ret, offs, got;
+	void *ptr;
+	int size;
+
+	http_socket = bsd_socket(2, 1, 6); // AF_INET, SOCK_STREAM, PROTO_TCP
+	if(http_socket < 0)
+		return -1;
+
+	if(bsd_connect(http_socket, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
+	{
+		bsd_close(http_socket);
+		return -2;
+	}
+
+	// make a request
+	fprintf(&http_stdout, http_get_template, path);
+
+	// get an answer
+	ret = parse_header(temp, sizeof(temp), &offs, &got);
+	// load it now
+	if(ret > 0)
+	{
+		printf("- HTTP file size: %iB\n", ret);
+		*buff = Z_Malloc(ret, PU_STATIC, NULL);
+		ptr = *buff;
+		size = ret;
+		if(got)
+		{
+			memcpy(ptr, temp + offs, got);
+			ptr += got;
+			size -= got;
+		}
+		while(size)
+		{
+			got = bsd_recv(http_socket, ptr, size, 0);
+			if(got <= 0)
+			{
+				bsd_close(http_socket);
+				printf("- read error\n");
+				return -4;
+			}
+			size -= got;
+			ptr += got;
+		}
+		printf("- file loaded\n");
+	}
+
+	bsd_close(http_socket);
+	return ret;
+}
+
+#else
+
 bool file_exists(const char *path)
 {
 	FILE *f = fopen(path, "rb");
@@ -213,7 +273,7 @@ int select_wad()
 	}
 }
 
-int http_get_file(const char *path, void **buff)
+int sdcard_get_file(const char *path, void **buff)
 {
 	printf_net("http_get_file was called...\n");
 
@@ -278,6 +338,7 @@ int http_get_file(const char *path, void **buff)
 
 	return rd;
 }
+#endif
 
 char *test_argv[] =
 {

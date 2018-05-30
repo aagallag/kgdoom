@@ -9,6 +9,7 @@
 #pragma implementation "w_wad.h"
 #endif
 #include "w_wad.h"
+#include "config.h"
 
 // [kg] rewritten lump handling, WADs are in memory
 
@@ -28,7 +29,11 @@ int		numwads;
 //
 
 #ifndef LINUX
+#ifdef SWITCH_SERVER
 int http_get_file(const char *path, void **buff);
+#else
+int sdcard_get_file(const char *path, void **buff);
+#endif
 #endif
 
 void W_LoadWad(const char *name)
@@ -53,7 +58,11 @@ void W_LoadWad(const char *name)
 
 	fclose(f);
 #else
+#ifdef SWITCH_SERVER
 	wadsize = http_get_file(name, &wadbuf[numwads]);
+#else
+	wadsize = sdcard_get_file(name, &wadbuf[numwads]);
+#endif
 	if(wadsize <= 0)
 		I_Error("W_Init: can't load wad; %i", -wadsize);
 #endif
