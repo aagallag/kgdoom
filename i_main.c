@@ -204,10 +204,10 @@ int select_wad()
 		return TNT;
 	} else if (file_exists("/sd/switch/kgdoom/plutonia.wad")) {
 		return PLUTONIA;
-	} else if (file_exists("/sd/switch/kgdoom/freedom1.wad")) {
-		return FREEDOM1;
-	} else if (file_exists("/sd/switch/kgdoom/freedom2.wad")) {
-		return FREEDOM2;
+	} else if (file_exists("/sd/switch/kgdoom/freedoom1.wad")) {
+		return FREEDOOM1;
+	} else if (file_exists("/sd/switch/kgdoom/freedoom2.wad")) {
+		return FREEDOOM2;
 	} else {
 		return SHAREWARE;
 	}
@@ -235,12 +235,12 @@ int http_get_file(const char *path, void **buff)
 	} else if (strcmp(path, "doom2.wad") == 0)
 	{
 		f = fopen("/sd/switch/kgdoom/doom2.wad", "rb");
-	} else if (strcmp(path, "feedom1.wad") == 0)
+	} else if (strcmp(path, "feedoom1.wad") == 0)
 	{
-		f = fopen("/sd/switch/kgdoom/feedom1.wad", "rb");
-	} else if (strcmp(path, "feedom2.wad") == 0)
+		f = fopen("/sd/switch/kgdoom/feedoom1.wad", "rb");
+	} else if (strcmp(path, "feedoom2.wad") == 0)
 	{
-		f = fopen("/sd/switch/kgdoom/feedom2.wad", "rb");
+		f = fopen("/sd/switch/kgdoom/feedoom2.wad", "rb");
 	} else
 	{
 		f = fopen("/sd/switch/kgdoom/doom1.wad", "rb");

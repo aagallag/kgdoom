@@ -480,12 +480,12 @@ void D_DoomMain (void)
 		gamemode = commercial;
 		iwad = "doom2.wad";
 	}
-	else if(doom_wad == FREEDOM1)
+	else if(doom_wad == FREEDOOM1)
 	{
 		gamemode = retail;
 		iwad = "freedoom1.wad";
 	} 
-	else if(doom_wad == FREEDOM2)
+	else if(doom_wad == FREEDOOM2)
 	{
 		gamemode = commercial;
 		iwad = "freedoom2.wad";
