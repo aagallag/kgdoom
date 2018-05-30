@@ -47,6 +47,10 @@
 
 #include "d_main.h"
 
+#ifndef LINUX
+#include "wad.h"
+#endif
+
 //
 // D-DoomLoop()
 // Not a globally visible function,
@@ -438,52 +442,62 @@ void D_DoomMain (void)
     printf ("Z_Init: Init zone memory allocation daemon. \n");
     Z_Init ();
 
+    printf_net("Z_INIT returned\n");
+
     printf ("I_InitNetwork: init kgsws' multiplayer protocol\n");
     I_InitNetwork();
+    printf_net("InitNetwork returned\n");
 
     printf ("W_Init: Init WADfiles.\n");
 
 	// pick an IWAD
+	int doom_wad = select_wad();
 	gamemode = shareware;
 	iwad = "doom1.wad";
 
-	if(M_CheckParm ("-doom"))
+	if(doom_wad == DOOM1)
 	{
 		gamemode = registered;
 		iwad = "doom.wad";
-	} else
-	if(M_CheckParm ("-doomu"))
+	}
+	else if(doom_wad == ULTIMATE_DOOM)
 	{
 		gamemode = retail;
 		iwad = "doomu.wad";
-	} else
-	if(M_CheckParm ("-tnt"))
+	}
+	else if(doom_wad == TNT)
 	{
 		gamemode = commercial;
 		iwad = "tnt.wad";
-	} else
-	if(M_CheckParm ("-plutonia"))
+	}
+	else if(doom_wad == PLUTONIA)
 	{
 		gamemode = commercial;
 		iwad = "plutonia.wad";
-	} else
-	if(M_CheckParm ("-doom2"))
+	}
+	else if(doom_wad == DOOM2)
 	{
 		gamemode = commercial;
 		iwad = "doom2.wad";
-	} else
-	if(M_CheckParm ("-freedoom"))
+	}
+	else if(doom_wad == FREEDOM1)
 	{
 		gamemode = retail;
 		iwad = "freedoom1.wad";
-	} else
-	if(M_CheckParm ("-freedoom2"))
+	} 
+	else if(doom_wad == FREEDOM2)
 	{
 		gamemode = commercial;
 		iwad = "freedoom2.wad";
 	}
 
+	printf_net("Wad: ");
+	printf_net(iwad);
+	printf_net("\n");
+	printf_net("We about to call LoadWad\n");
+
 	W_LoadWad(iwad);
+	printf_net("W_LoadWad is gooooood\n");
 
 	// add PWADs
 	p = M_CheckParm ("-file");
@@ -562,6 +576,8 @@ void D_DoomMain (void)
     }
     
     printf ("%s\n",title);
+    printf_net(title);
+    printf_net("\n");
 
 //    if (devparm)
 //	printf(D_DEVSTR);
@@ -705,7 +721,7 @@ void D_DoomMain (void)
     {
       case shareware:
       case indetermined:
-	printf (
+	printf_net (
 	    "===========================================================================\n"
 	    "                                Shareware!\n"
 	    "===========================================================================\n"
@@ -763,6 +779,7 @@ void D_DoomMain (void)
 
 #endif
 
+	printf_net("About to call doom loop.......\n");
     D_DoomLoop ();  // never returns
 }
 

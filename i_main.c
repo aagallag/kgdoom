@@ -1,5 +1,9 @@
 #ifndef LINUX
 #include <libtransistor/err.h>
+#include <libtransistor/ipc/bsd.h>
+#define DBG_SERVER false
+#include "wad.h"
+#include <unistd.h>
 #endif
 
 #include "doomdef.h"
@@ -62,7 +66,48 @@ struct bsd_pollfd
 #define	BSD_POLLIN	0x0001
 // -temporary
 
+#if DBG_SERVER
+int client_fd;
+#endif
 static int http_socket;
+
+int printf_net(const char *str)
+{
+#if DBG_SERVER
+	return bsd_send(client_fd, str, strlen(str), 0);
+#else
+	return 0;
+#endif
+}
+
+static void connect_net()
+{
+#if DBG_SERVER
+	char server_ip_addr[4] = {192, 168, 2, 42};
+	struct sockaddr_in log_server_addr = {
+		.sin_family = AF_INET,
+		.sin_port = htons(5555),
+		.sin_addr = {
+			.s_addr = *(uint32_t*) server_ip_addr
+		}
+	};
+
+	client_fd = bsd_socket(2, 1, 6); // AF_INET, SOCK_STREAM, PROTO_TCP
+	if(client_fd < 0) {
+		printf("failed to create socket: 0x%x, %d\n", bsd_result, bsd_errno);
+		return;
+	}
+	printf("made client socket %d\n", client_fd);
+	svcSleepThread(100000000*10);
+
+	if(bsd_connect(client_fd, (struct sockaddr*) &log_server_addr, sizeof(log_server_addr)) < 0) {
+		printf("failed to connect socket: 0x%x, %d\n", bsd_result, bsd_errno);
+		return;
+	}
+
+	printf_net("testing printf_net func...\n");
+#endif
+}
 
 static int stdout_http(struct _reent *reent, void *v, const char *ptr, int len)
 {
@@ -138,58 +183,100 @@ static int parse_header(char *buf, int len, int *offset, int *got)
 	return -1;
 }
 
+bool file_exists(const char *path)
+{
+	FILE *f = fopen(path, "rb");
+	if (f == NULL) {
+		return false;
+	}
+	return true;
+}
+
+int select_wad()
+{
+	if (file_exists("/sd/switch/kgdoom/doom.wad")) {
+		return DOOM1;
+	} else if (file_exists("/sd/switch/kgdoom/doom2.wad")) {
+		return DOOM2;
+	} else if (file_exists("/sd/switch/kgdoom/doomu.wad")) {
+		return ULTIMATE_DOOM;
+	} else if (file_exists("/sd/switch/kgdoom/tnt.wad")) {
+		return TNT;
+	} else if (file_exists("/sd/switch/kgdoom/plutonia.wad")) {
+		return PLUTONIA;
+	} else if (file_exists("/sd/switch/kgdoom/freedom1.wad")) {
+		return FREEDOM1;
+	} else if (file_exists("/sd/switch/kgdoom/freedom2.wad")) {
+		return FREEDOM2;
+	} else {
+		return SHAREWARE;
+	}
+}
+
 int http_get_file(const char *path, void **buff)
 {
-	char temp[1024];
-	int ret, offs, got;
+	printf_net("http_get_file was called...\n");
+
+	// Open file
+	FILE *f;
+
+	if (strcmp(path, "doom.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/doom.wad", "rb");
+	} else if (strcmp(path, "doomu.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/doomu.wad", "rb");
+	} else if (strcmp(path, "tnt.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/tnt.wad", "rb");
+	} else if (strcmp(path, "plutonia.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/plutonia.wad", "rb");
+	} else if (strcmp(path, "doom2.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/doom2.wad", "rb");
+	} else if (strcmp(path, "feedom1.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/feedom1.wad", "rb");
+	} else if (strcmp(path, "feedom2.wad") == 0)
+	{
+		f = fopen("/sd/switch/kgdoom/feedom2.wad", "rb");
+	} else
+	{
+		f = fopen("/sd/switch/kgdoom/doom1.wad", "rb");
+	}
+
+
+	if (f == NULL) {
+		printf_net("Failed to open /sd/switch/kgdoom/doom.wad\n");
+		return 1;
+	}
+	printf_net("Open worked\n");
+
+	// Get file length
+	fseek(f, 0L, SEEK_END);
+	int len = ftell(f);
+	rewind(f);
+	printf_net("Got filesize of wad...\n");
+
+	// Malloc memory
 	void *ptr;
-	int size;
+	*buff = Z_Malloc(len, PU_STATIC, NULL);
+	ptr = *buff;
+	printf("Malloc done...\n");
 
-	http_socket = bsd_socket(2, 1, 6); // AF_INET, SOCK_STREAM, PROTO_TCP
-	if(http_socket < 0)
-		return -1;
-
-	if(bsd_connect(http_socket, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0)
-	{
-		bsd_close(http_socket);
-		return -2;
+	// Read file contents
+	int rd = fread(ptr, 1, len, f);
+	if (rd <= 0) {
+		printf_net("fread return zero or less\n");
+		return 1;
 	}
 
-	// make a request
-	fprintf(&http_stdout, http_get_template, path);
+	// Close
+	fclose(f);
+	printf_net("just called fclose...\n");
 
-	// get an answer
-	ret = parse_header(temp, sizeof(temp), &offs, &got);
-	// load it now
-	if(ret > 0)
-	{
-		printf("- HTTP file size: %iB\n", ret);
-		*buff = Z_Malloc(ret, PU_STATIC, NULL);
-		ptr = *buff;
-		size = ret;
-		if(got)
-		{
-			memcpy(ptr, temp + offs, got);
-			ptr += got;
-			size -= got;
-		}
-		while(size)
-		{
-			got = bsd_recv(http_socket, ptr, size, 0);
-			if(got <= 0)
-			{
-				bsd_close(http_socket);
-				printf("- read error\n");
-				return -4;
-			}
-			size -= got;
-			ptr += got;
-		}
-		printf("- file loaded\n");
-	}
-
-	bsd_close(http_socket);
-	return ret;
+	return rd;
 }
 
 char *test_argv[] =
@@ -201,11 +288,33 @@ char *test_argv[] =
 	NULL
 };
 
+static int bsd_ipc_initializations = 0;
+static ipc_object_t bsd_object;
+
+result_t bsd_ipc_init() {
+	result_t r = RESULT_OK;
+
+	if(bsd_ipc_initializations++ > 0) {
+		return r;
+	}
+
+	r = sm_get_service(&bsd_object, bsd_get_socket_service_name());
+	if(r) {
+		goto fail_sm;
+	}
+	return 0;
+
+fail_sm:
+	sm_finalize();
+fail:
+	bsd_ipc_initializations--;
+	return r;
+}
+
 // +temporary
 int bsd_poll(struct bsd_pollfd *fds, int nfds, int timeout)
 {
 	result_t r;
-	ipc_object_t bsd_object = bsd_get_object();
 
 	int32_t raw[] = {nfds, timeout};
 
@@ -324,20 +433,9 @@ int main(int argc, char **argv)
 		sm_finalize();
 		return 3;
 	}
+	bsd_ipc_init();
 
-	// prepare HTTP stdout
-	if(libtransistor_context.workstation_addr)
-		server_addr.sin_addr.s_addr = libtransistor_context.workstation_addr;
-	else
-	{
-		server_addr.sin_addr.s_addr = make_ip(192,168,1,47);
-		server_addr.sin_port = htons(8001);
-		myargv = test_argv;
-		myargc = (sizeof(test_argv) / sizeof(char*)) - 1;
-	}
-	http_stdout._write = stdout_http;
-	http_stdout._flags = __SWR | __SNBF;
-	http_stdout._bf._base = (void*)1;
+	connect_net();
 #endif
 
 	srand(time(NULL));
