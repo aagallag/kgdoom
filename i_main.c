@@ -497,6 +497,23 @@ int main(int argc, char **argv)
 	bsd_ipc_init();
 
 	connect_net();
+
+#ifdef SWITCH_SERVER
+	// prepare HTTP stdout
+	// NOTE: libtransistor_context doesn't exist in latest libtransistor SDK
+	if(libtransistor_context.workstation_addr)
+		server_addr.sin_addr.s_addr = libtransistor_context.workstation_addr;
+	else
+	{
+		server_addr.sin_addr.s_addr = make_ip(192,168,1,47);
+		server_addr.sin_port = htons(8001);
+		myargv = test_argv;
+		myargc = (sizeof(test_argv) / sizeof(char*)) - 1;
+	}
+	http_stdout._write = stdout_http;
+	http_stdout._flags = __SWR | __SNBF;
+	http_stdout._bf._base = (void*)1;
+#endif
 #endif
 
 	srand(time(NULL));
