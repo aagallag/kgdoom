@@ -346,7 +346,7 @@ static patch_t*		items;
 static patch_t*		frags;
 
 // Time sucks.
-static patch_t*		time;
+static patch_t*		patch_time;
 static patch_t*		par;
 static patch_t*		sucks;
 
@@ -1430,7 +1430,7 @@ void WI_drawStats(void)
     V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, FB, sp_secret);
     WI_drawPercent(320 - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
 
-    V_DrawPatch(SP_TIMEX, SP_TIMEY, FB, time);
+    V_DrawPatch(SP_TIMEX, SP_TIMEY, FB, patch_time);
     WI_drawTime(320/2 - SP_TIMEX, SP_TIMEY, cnt_time);
 
     if (wbs->epsd < 3)
@@ -1638,7 +1638,7 @@ void WI_loadData(void)
     colon = W_CacheLumpName("WICOLON"); 
 
     // "time"
-    time = W_CacheLumpName("WITIME");   
+    patch_time = W_CacheLumpName("WITIME");
 
     // "sucks"
     sucks = W_CacheLumpName("WISUCKS");  
